@@ -1,6 +1,6 @@
 /*
- * This file is part of Adblock Plus <http://adblockplus.org/>,
- * Copyright (C) 2006-2014 Eyeo GmbH
+ * This file is part of Adblock Plus <https://adblockplus.org/>,
+ * Copyright (C) 2006-2015 Eyeo GmbH
  *
  * Adblock Plus is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as
@@ -24,6 +24,7 @@
 #include <vector>
 #include <AdblockPlus/JsEngine.h>
 #include <AdblockPlus/JsValue.h>
+#include <AdblockPlus/Notification.h>
 
 #include "tr1_memory.h"
 
@@ -33,6 +34,9 @@ namespace AdblockPlus
 
   /**
    * Wrapper for an Adblock Plus filter object.
+   * There are no accessors for most
+   * [filter properties](https://adblockplus.org/jsdoc/adblockplus/symbols/Filter.html),
+   * use `GetProperty()` to retrieve them by name.
    */
   class Filter : public JsValue,
                  public std::tr1::enable_shared_from_this<Filter>
@@ -80,6 +84,9 @@ namespace AdblockPlus
 
   /**
    * Wrapper for a subscription object.
+   * There are no accessors for most
+   * [subscription properties](https://adblockplus.org/jsdoc/adblockplus/symbols/Subscription.html),
+   * use `GetProperty()` to retrieve them by name.
    */
   class Subscription : public JsValue,
                        public std::tr1::enable_shared_from_this<Subscription>
@@ -153,7 +160,7 @@ namespace AdblockPlus
                       CONTENT_TYPE_OBJECT, CONTENT_TYPE_SUBDOCUMENT,
                       CONTENT_TYPE_DOCUMENT, CONTENT_TYPE_XMLHTTPREQUEST,
                       CONTENT_TYPE_OBJECT_SUBREQUEST, CONTENT_TYPE_FONT,
-                      CONTENT_TYPE_MEDIA};
+                      CONTENT_TYPE_MEDIA, CONTENT_TYPE_ELEMHIDE};
 
     /**
      * Callback type invoked when an update becomes available.
@@ -229,6 +236,14 @@ namespace AdblockPlus
      * @return List of recommended subscriptions.
      */
     std::vector<SubscriptionPtr> FetchAvailableSubscriptions() const;
+
+    /**
+     * Determines which notification is to be shown next.
+     * @param url URL to match notifications to (optional).
+     * @return Notification to be shown, or `null` if there is no any.
+     */
+    NotificationPtr GetNextNotificationToShow(
+      const std::string& url = std::string());
 
     /**
      * Checks if any active filter matches the supplied URL.
