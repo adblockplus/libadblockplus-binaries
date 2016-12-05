@@ -1,6 +1,6 @@
 /*
  * This file is part of Adblock Plus <https://adblockplus.org/>,
- * Copyright (C) 2006-2015 Eyeo GmbH
+ * Copyright (C) 2006-2016 Eyeo GmbH
  *
  * Adblock Plus is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as
@@ -29,8 +29,6 @@
 #include <AdblockPlus/JsValue.h>
 #include <AdblockPlus/WebRequest.h>
 
-#include "V8ValueHolder.h"
-
 namespace v8
 {
   class Arguments;
@@ -49,6 +47,31 @@ namespace AdblockPlus
    * Shared smart pointer to a `JsEngine` instance.
    */
   typedef std::shared_ptr<JsEngine> JsEnginePtr;
+
+  /**
+   * Scope based isolate manager. Creates a new isolate instance on
+   * constructing and disposes it on destructing.
+   */
+  class ScopedV8Isolate
+  {
+  public:
+    ScopedV8Isolate();
+    ~ScopedV8Isolate();
+    v8::Isolate* Get()
+    {
+      return isolate;
+    }
+  private:
+    ScopedV8Isolate(const ScopedV8Isolate&);
+    ScopedV8Isolate& operator=(const ScopedV8Isolate&);
+
+    v8::Isolate* isolate;
+  };
+
+  /**
+   * Shared smart pointer to ScopedV8Isolate instance;
+   */
+  typedef std::shared_ptr<ScopedV8Isolate> ScopedV8IsolatePtr;
 
   /**
    * JavaScript engine used by `FilterEngine`, wraps v8.
@@ -72,9 +95,11 @@ namespace AdblockPlus
     /**
      * Creates a new JavaScript engine instance.
      * @param appInfo Information about the app.
+     * @param isolate v8::Isolate wrapper. This parameter should be considered
+     *        as a temporary hack for tests, it will go away. Issue #3593.
      * @return New `JsEngine` instance.
      */
-    static JsEnginePtr New(const AppInfo& appInfo = AppInfo());
+    static JsEnginePtr New(const AppInfo& appInfo = AppInfo(), const ScopedV8IsolatePtr& isolate = ScopedV8IsolatePtr(new ScopedV8Isolate()));
 
     /**
      * Registers the callback function for an event.
@@ -217,16 +242,28 @@ namespace AdblockPlus
      */
     void SetGlobalProperty(const std::string& name, AdblockPlus::JsValuePtr value);
 
+    /**
+     * Returns a pointer to associated v8::Isolate.
+     */
+    v8::Isolate* GetIsolate()
+    {
+      return isolate->Get();
+    }
+
   private:
-    JsEngine();
+    explicit JsEngine(const ScopedV8IsolatePtr& isolate);
+
+    JsValuePtr GetGlobalObject();
+
+    /// Isolate must be disposed only after disposing of all objects which are
+    /// using it.
+    ScopedV8IsolatePtr isolate;
 
     FileSystemPtr fileSystem;
     WebRequestPtr webRequest;
     LogSystemPtr logSystem;
-    v8::Isolate* isolate;
-    V8ValueHolder<v8::Context> context;
+    std::unique_ptr<v8::Persistent<v8::Context>> context;
     EventMap eventCallbacks;
-    JsValuePtr globalJsObject;
   };
 }
 

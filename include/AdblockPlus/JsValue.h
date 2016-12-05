@@ -1,6 +1,6 @@
 /*
  * This file is part of Adblock Plus <https://adblockplus.org/>,
- * Copyright (C) 2006-2015 Eyeo GmbH
+ * Copyright (C) 2006-2016 Eyeo GmbH
  *
  * Adblock Plus is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as
@@ -22,13 +22,13 @@
 #include <string>
 #include <vector>
 #include <memory>
-#include "V8ValueHolder.h"
 
 namespace v8
 {
   class Value;
   template<class T> class Handle;
   template<class T> class Local;
+  template<class T> class Persistent;
 }
 
 namespace AdblockPlus
@@ -56,6 +56,7 @@ namespace AdblockPlus
   {
     friend class JsEngine;
   public:
+    JsValue(JsValue&& src);
     virtual ~JsValue();
 
     bool IsUndefined() const;
@@ -123,14 +124,21 @@ namespace AdblockPlus
     JsValuePtr Call(const JsValueList& params = JsValueList(),
         AdblockPlus::JsValuePtr thisPtr = AdblockPlus::JsValuePtr()) const;
 
+    /**
+     * Invokes the value as a function (see `IsFunction()`) with single
+     * parameter.
+     * @param arg A single required parameter.
+     * @return Value returned by the function.
+     */
+    JsValuePtr Call(const JsValue& arg) const;
+
     v8::Local<v8::Value> UnwrapValue() const;
   protected:
-    JsValue(JsValuePtr value);
     JsEnginePtr jsEngine;
   private:
     JsValue(JsEnginePtr jsEngine, v8::Handle<v8::Value> value);
     void SetProperty(const std::string& name, v8::Handle<v8::Value> val);
-    V8ValueHolder<v8::Value> value;
+    std::unique_ptr<v8::Persistent<v8::Value>> value;
   };
 }
 

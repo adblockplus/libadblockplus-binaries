@@ -1,6 +1,6 @@
 /*
  * This file is part of Adblock Plus <https://adblockplus.org/>,
- * Copyright (C) 2006-2015 Eyeo GmbH
+ * Copyright (C) 2006-2016 Eyeo GmbH
  *
  * Adblock Plus is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as
@@ -55,9 +55,9 @@ namespace AdblockPlus
   protected:
     /**
      * Constructor.
-     * @param jsValue `JsValuePtr` notification JavaScript object.
+     * @param jsValue `JsValue&&` notification JavaScript object.
      */
-    explicit Notification(const JsValuePtr& jsValue);
+    explicit Notification(JsValue&& jsValue);
   public:
     /**
      * Retrieves the type of this notification.
@@ -69,7 +69,7 @@ namespace AdblockPlus
      * Retrieves the title and message of this notification.
      * @return Translated texts.
      */
-    NotificationTexts GetTexts();
+    NotificationTexts GetTexts() const;
 
     /**
      * Retrieves the URLs which should be mapped to the links in the message.
