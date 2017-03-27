@@ -1,6 +1,6 @@
 /*
  * This file is part of Adblock Plus <https://adblockplus.org/>,
- * Copyright (C) 2006-2016 Eyeo GmbH
+ * Copyright (C) 2006-2017 eyeo GmbH
  *
  * Adblock Plus is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as
@@ -20,9 +20,11 @@
 
 #include <functional>
 #include <map>
+#include <list>
 #include <stdexcept>
 #include <stdint.h>
 #include <string>
+#include <mutex>
 #include <AdblockPlus/AppInfo.h>
 #include <AdblockPlus/LogSystem.h>
 #include <AdblockPlus/FileSystem.h>
@@ -86,6 +88,12 @@ namespace AdblockPlus
      * Event callback function.
      */
     typedef std::function<void(JsValueList& params)> EventCallback;
+
+    /**
+    * Callback function returning false when current connection is not allowed
+    * e.g. because it is a metered connection.
+    */
+    typedef std::function<bool()> IsConnectionAllowedCallback;
 
     /**
      * Maps events to callback functions.
@@ -222,6 +230,19 @@ namespace AdblockPlus
     void SetWebRequest(WebRequestPtr val);
 
     /**
+    * Registers the callback function to check whether current connection is
+    * allowed for network requests.
+    * @param callback callback function.
+    */
+    void SetIsConnectionAllowedCallback(const IsConnectionAllowedCallback& callback);
+
+    /**
+     * Checks whether current connection is allowed. If
+     * IsConnectionAllowedCallback is not set then then it returns true.
+     */
+    bool IsConnectionAllowed();
+
+    /**
      * @see `SetLogSystem()`.
      */
     LogSystemPtr GetLogSystem();
@@ -250,6 +271,21 @@ namespace AdblockPlus
       return isolate->Get();
     }
 
+    // Private functionality required to implement timers.
+    struct TimerTaskInfo
+    {
+      ~TimerTaskInfo();
+      int delay;
+      std::vector<std::unique_ptr<v8::Persistent<v8::Value>>> arguments;
+    };
+    typedef std::list<TimerTaskInfo> TimerTaskInfos;
+    struct TimerTask
+    {
+      std::weak_ptr<JsEngine> weakJsEngine;
+      TimerTaskInfos::const_iterator taskInfoIterator;
+    };
+    TimerTask CreateTimerTask(const v8::Arguments& arguments);
+    void CallTimerTask(TimerTaskInfos::const_iterator taskInfoIterator);
   private:
     explicit JsEngine(const ScopedV8IsolatePtr& isolate);
 
@@ -264,6 +300,10 @@ namespace AdblockPlus
     LogSystemPtr logSystem;
     std::unique_ptr<v8::Persistent<v8::Context>> context;
     EventMap eventCallbacks;
+    std::mutex eventCallbacksMutex;
+    std::mutex isConnectionAllowedMutex;
+    IsConnectionAllowedCallback isConnectionAllowed;
+    TimerTaskInfos timerTaskInfos;
   };
 }
 

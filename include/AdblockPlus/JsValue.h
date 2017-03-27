@@ -1,6 +1,6 @@
 /*
  * This file is part of Adblock Plus <https://adblockplus.org/>,
- * Copyright (C) 2006-2016 Eyeo GmbH
+ * Copyright (C) 2006-2017 eyeo GmbH
  *
  * Adblock Plus is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as
@@ -42,11 +42,13 @@ namespace AdblockPlus
    * Shared smart pointer to a `JsValue` instance.
    */
   typedef std::shared_ptr<JsValue> JsValuePtr;
+  typedef std::shared_ptr<const JsValue> JsConstValuePtr;
 
   /**
    * List of JavaScript values.
    */
   typedef std::vector<AdblockPlus::JsValuePtr> JsValueList;
+  typedef std::vector<AdblockPlus::JsConstValuePtr> JsConstValueList;
 
   /**
    * Wrapper for JavaScript values.
@@ -121,7 +123,7 @@ namespace AdblockPlus
      * @param thisPtr Optional `this` value.
      * @return Value returned by the function.
      */
-    JsValuePtr Call(const JsValueList& params = JsValueList(),
+    JsValuePtr Call(const JsConstValueList& params = JsConstValueList(),
         AdblockPlus::JsValuePtr thisPtr = AdblockPlus::JsValuePtr()) const;
 
     /**
@@ -130,7 +132,7 @@ namespace AdblockPlus
      * @param arg A single required parameter.
      * @return Value returned by the function.
      */
-    JsValuePtr Call(const JsValue& arg) const;
+    JsValuePtr Call(const JsConstValuePtr& arg) const;
 
     v8::Local<v8::Value> UnwrapValue() const;
   protected:

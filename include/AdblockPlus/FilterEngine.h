@@ -1,6 +1,6 @@
 /*
  * This file is part of Adblock Plus <https://adblockplus.org/>,
- * Copyright (C) 2006-2016 Eyeo GmbH
+ * Copyright (C) 2006-2017 eyeo GmbH
  *
  * Adblock Plus is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as
@@ -29,6 +29,7 @@
 namespace AdblockPlus
 {
   class FilterEngine;
+  typedef std::shared_ptr<FilterEngine> FilterEnginePtr;
 
   /**
    * Wrapper for an Adblock Plus filter object.
@@ -51,13 +52,13 @@ namespace AdblockPlus
      * Retrieves the type of this filter.
      * @return Type of this filter.
      */
-    Type GetType();
+    Type GetType() const;
 
     /**
      * Checks whether this filter has been added to the list of custom filters.
      * @return `true` if this filter has been added.
      */
-    bool IsListed();
+    bool IsListed() const;
 
     /**
      * Adds this filter to the list of custom filters.
@@ -94,7 +95,7 @@ namespace AdblockPlus
      * Checks if this subscription has been added to the list of subscriptions.
      * @return `true` if this subscription has been added.
      */
-    bool IsListed();
+    bool IsListed() const;
 
     /**
      * Adds this subscription to the list of subscriptions.
@@ -116,7 +117,7 @@ namespace AdblockPlus
      * Checks if the subscription is currently being updated.
      * @return `true` if the subscription is currently being updated.
      */
-    bool IsUpdating();
+    bool IsUpdating() const;
 
     bool operator==(const Subscription& subscription) const;
 
@@ -213,15 +214,52 @@ namespace AdblockPlus
     typedef std::function<void(const NotificationPtr&)> ShowNotificationCallback;
 
     /**
-     * Constructor.
+     * Callback function returning false when current connection is not
+     * allowedConnectionType, e.g. because it is a metered connection.
+     */
+    typedef std::function<bool(const std::string* allowedConnectionType)> IsConnectionAllowedCallback;
+
+    /**
+     * FilterEngine creation parameters.
+     */
+    struct CreationParameters
+    {
+      /**
+       * `AdblockPlus::FilterEngine::Prefs` name - value list of preconfigured
+       * prefs.
+       */
+      Prefs preconfiguredPrefs;
+      /**
+       * `AdblockPlus::FilterEngine::IsConnectionAllowedCallback` a callback
+       * checking whether the request from Adblock Plus should be blocked on
+       * the current connection.
+       */
+      IsConnectionAllowedCallback isConnectionAllowedCallback;
+    };
+
+    /**
+    * Callback type invoked when FilterEngine is created.
+    */
+    typedef std::function<void(const FilterEnginePtr&)> OnCreatedCallback;
+
+    /**
+     * Asynchronously constructs FilterEngine.
      * @param jsEngine `JsEngine` instance used to run JavaScript code
      *        internally.
-     * @param preconfiguredPrefs `AdblockPlus::FilterEngine::Prefs`
-     *        name-value list of preconfigured prefs.
+     * @param onCreated A callback which is called when FilterEngine is ready
+     *        for use.
+     * @param parameters optional creation parameters.
      */
-    explicit FilterEngine(JsEnginePtr jsEngine, 
-        const Prefs& preconfiguredPrefs = Prefs()
-      );
+    static void CreateAsync(const JsEnginePtr& jsEngine,
+      const OnCreatedCallback& onCreated,
+      const CreationParameters& parameters = CreationParameters());
+
+    /**
+     * Synchronous interface to construct FilterEngine. For details see
+     * asynchronous version CreateAsync.
+     */
+    static FilterEnginePtr Create(const JsEnginePtr& jsEngine,
+      const CreationParameters& params = CreationParameters());
 
     /**
      * Retrieves the `JsEngine` instance associated with this `FilterEngine`
@@ -241,14 +279,14 @@ namespace AdblockPlus
      *        see https://adblockplus.org/en/filters.
      * @return New `Filter` instance.
      */
-    FilterPtr GetFilter(const std::string& text);
+    FilterPtr GetFilter(const std::string& text) const;
 
     /**
      * Retrieves a subscription object for the supplied URL.
      * @param url Subscription URL.
      * @return New `Subscription` instance.
      */
-    SubscriptionPtr GetSubscription(const std::string& url);
+    SubscriptionPtr GetSubscription(const std::string& url) const;
 
     /**
      * Retrieves the list of custom filters.
@@ -373,7 +411,7 @@ namespace AdblockPlus
      * @param url URL to extract the host from.
      * @return Extracted host.
      */
-    std::string GetHostFromURL(const std::string& url);
+    std::string GetHostFromURL(const std::string& url) const;
 
     /**
      * Sets the callback invoked when an application update becomes available.
@@ -399,7 +437,7 @@ namespace AdblockPlus
      *        available or not - to react to updates being available, use
      *        `FilterEngine::SetUpdateAvailableCallback()`.
      */
-    void ForceUpdateCheck(UpdateCheckDoneCallback callback);
+    void ForceUpdateCheck(const UpdateCheckDoneCallback& callback = UpdateCheckDoneCallback());
 
     /**
      * Sets the callback invoked when the filters change.
@@ -413,6 +451,20 @@ namespace AdblockPlus
     void RemoveFilterChangeCallback();
 
     /**
+     * Stores the value indicating what connection types are allowed, it is
+     * passed to CreateParameters::isConnectionAllowed callback.
+     * @param value Stored value. nullptr means removing of any previously
+     *        stored value.
+     */
+    void SetAllowedConnectionType(const std::string* value);
+
+    /**
+      * Retrieves previously stored allowed connection type.
+      * @return Preference value, or `nullptr` if it doesn't exist.
+      */
+    std::unique_ptr<std::string> GetAllowedConnectionType() const;
+
+    /**
      * Compares two version strings in
      * [Mozilla toolkit version format](https://developer.mozilla.org/en/docs/Toolkit_version_format).
      * @param v1 First version string.
@@ -422,7 +474,7 @@ namespace AdblockPlus
      *         - A negative number if `v1` is less than `v2`.
      *         - A positive number if `v1` is greater than `v2`.
      */
-    int CompareVersions(const std::string& v1, const std::string& v2);
+    int CompareVersions(const std::string& v1, const std::string& v2) const;
 
     /**
      * Retrieves the `ContentType` for the supplied string.
@@ -442,12 +494,12 @@ namespace AdblockPlus
 
   private:
     JsEnginePtr jsEngine;
-    bool initialized;
     bool firstRun;
     int updateCheckId;
     static const std::map<ContentType, std::string> contentTypes;
 
-    void InitDone(JsValueList& params);
+    explicit FilterEngine(const JsEnginePtr& jsEngine);
+
     FilterPtr CheckFilterMatch(const std::string& url,
                                ContentTypeMask contentTypeMask,
                                const std::string& documentUrl) const;
