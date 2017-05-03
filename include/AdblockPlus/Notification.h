@@ -48,8 +48,7 @@ namespace AdblockPlus
   /**
    * Wrapper for an Adblock Plus notification object.
    */
-  class Notification: public JsValue,
-                      public std::enable_shared_from_this<Notification>
+  class Notification: public JsValue
   {
     friend class FilterEngine;
   protected:
@@ -59,6 +58,26 @@ namespace AdblockPlus
      */
     explicit Notification(JsValue&& jsValue);
   public:
+    /**
+     * Copy constructor
+     */
+    Notification(const Notification& src);
+
+    /**
+     * Move constructor
+     */
+    Notification(Notification&& src);
+
+    /**
+     * Assignment operator
+     */
+    Notification& operator=(const Notification& src);
+
+    /**
+     * Move assignment operator
+     */
+    Notification& operator=(Notification&& src);
+
     /**
      * Retrieves the type of this notification.
      * @return Type of this notification.
@@ -84,7 +103,6 @@ namespace AdblockPlus
     void MarkAsShown();
   private:
   };
-  typedef std::shared_ptr<Notification> NotificationPtr;
 }
 
 #endif

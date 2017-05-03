@@ -93,7 +93,7 @@ namespace AdblockPlus
     /**
      * Event callback function.
      */
-    typedef std::function<void(JsValueList& params)> EventCallback;
+    typedef std::function<void(const JsValueList& params)> EventCallback;
 
     /**
     * Callback function returning false when current connection is not allowed
@@ -124,7 +124,7 @@ namespace AdblockPlus
      *        general purpose event handling mechanism.
      * @param callback Event callback function.
      */
-    void SetEventCallback(const std::string& eventName, EventCallback callback);
+    void SetEventCallback(const std::string& eventName, const EventCallback& callback);
 
     /**
      * Removes the callback function for an event.
@@ -137,7 +137,7 @@ namespace AdblockPlus
      * @param eventName Event name.
      * @param params Event parameters.
      */
-    void TriggerEvent(const std::string& eventName, JsValueList& params);
+    void TriggerEvent(const std::string& eventName, const JsValueList& params);
 
     /**
      * Evaluates a JavaScript expression.
@@ -146,7 +146,7 @@ namespace AdblockPlus
      *        messages.
      * @return Result of the evaluated expression.
      */
-    JsValuePtr Evaluate(const std::string& source,
+    JsValue Evaluate(const std::string& source,
         const std::string& filename = "");
 
     /**
@@ -160,19 +160,19 @@ namespace AdblockPlus
      * @param val Value to convert.
      * @return New `JsValue` instance.
      */
-    JsValuePtr NewValue(const std::string& val);
-    JsValuePtr NewValue(int64_t val);
-    JsValuePtr NewValue(bool val);
-    inline JsValuePtr NewValue(const char* val)
+    JsValue NewValue(const std::string& val);
+    JsValue NewValue(int64_t val);
+    JsValue NewValue(bool val);
+    inline JsValue NewValue(const char* val)
     {
       return NewValue(std::string(val));
     }
-    inline JsValuePtr NewValue(int val)
+    inline JsValue NewValue(int val)
     {
       return NewValue(static_cast<int64_t>(val));
     }
 #ifdef __APPLE__
-    inline JsValuePtr NewValue(long val)
+    inline JsValue NewValue(long val)
     {
       return NewValue(static_cast<int64_t>(val));
     }
@@ -183,7 +183,7 @@ namespace AdblockPlus
      * Creates a new JavaScript object.
      * @return New `JsValue` instance.
      */
-    JsValuePtr NewObject();
+    JsValue NewObject();
 
     /**
      * Creates a JavaScript function that invokes a C++ callback.
@@ -192,7 +192,7 @@ namespace AdblockPlus
      *        the current `JsEngine`.
      * @return New `JsValue` instance.
      */
-    JsValuePtr NewCallback(v8::InvocationCallback callback);
+    JsValue NewCallback(const v8::InvocationCallback& callback);
 
     /**
      * Returns a `JsEngine` instance contained in a `v8::Arguments` object.
@@ -215,14 +215,14 @@ namespace AdblockPlus
      * Converts v8 arguments to `JsValue` objects.
      * @param arguments `v8::Arguments` object containing the arguments to
      *        convert.
-     * @return List of arguments converted to `JsValue` objects.
+     * @return List of arguments converted to `const JsValue` objects.
      */
     JsValueList ConvertArguments(const v8::Arguments& arguments);
 
     /**
      * @see `SetFileSystem()`.
      */
-    FileSystemPtr GetFileSystem();
+    FileSystemPtr GetFileSystem() const;
 
     /**
      * Sets the `FileSystem` implementation used for all file I/O.
@@ -230,12 +230,12 @@ namespace AdblockPlus
      * instance by default, which might be sufficient.
      * @param The `FileSystem` instance to use.
      */
-    void SetFileSystem(FileSystemPtr val);
+    void SetFileSystem(const FileSystemPtr& val);
 
     /**
      * @see `SetWebRequest()`.
      */
-    WebRequestPtr GetWebRequest();
+    WebRequestPtr GetWebRequest() const;
 
     /**
      * Sets the `WebRequest` implementation used for XMLHttpRequests.
@@ -243,7 +243,7 @@ namespace AdblockPlus
      * instance by default, which might be sufficient.
      * @param The `WebRequest` instance to use.
      */
-    void SetWebRequest(WebRequestPtr val);
+    void SetWebRequest(const WebRequestPtr& val);
 
     /**
     * Registers the callback function to check whether current connection is
@@ -256,12 +256,12 @@ namespace AdblockPlus
      * Checks whether current connection is allowed. If
      * IsConnectionAllowedCallback is not set then then it returns true.
      */
-    bool IsConnectionAllowed();
+    bool IsConnectionAllowed() const;
 
     /**
      * @see `SetLogSystem()`.
      */
-    LogSystemPtr GetLogSystem();
+    LogSystemPtr GetLogSystem() const;
 
     /**
      * Sets the `LogSystem` implementation used for logging (e.g. to handle
@@ -270,14 +270,14 @@ namespace AdblockPlus
      * instance by default, which might be sufficient.
      * @param The `LogSystem` instance to use.
      */
-    void SetLogSystem(LogSystemPtr val);
+    void SetLogSystem(const LogSystemPtr& val);
 
     /**
      * Sets a global property that can be accessed by all the scripts.
      * @param name Name of the property to set.
      * @param value Value of the property to set.
      */
-    void SetGlobalProperty(const std::string& name, AdblockPlus::JsValuePtr value);
+    void SetGlobalProperty(const std::string& name, const AdblockPlus::JsValue& value);
 
     /**
      * Returns a pointer to associated v8::Isolate.
@@ -294,11 +294,11 @@ namespace AdblockPlus
       std::vector<std::unique_ptr<v8::Persistent<v8::Value>>> arguments;
     };
     typedef std::list<TimerTask> TimerTasks;
-    void CallTimerTask(TimerTasks::const_iterator timerTaskIterator);
+    void CallTimerTask(const TimerTasks::const_iterator& timerTaskIterator);
 
     explicit JsEngine(const ScopedV8IsolatePtr& isolate, TimerPtr timer);
 
-    JsValuePtr GetGlobalObject();
+    JsValue GetGlobalObject();
 
     /// Isolate must be disposed only after disposing of all objects which are
     /// using it.
@@ -310,7 +310,7 @@ namespace AdblockPlus
     std::unique_ptr<v8::Persistent<v8::Context>> context;
     EventMap eventCallbacks;
     std::mutex eventCallbacksMutex;
-    std::mutex isConnectionAllowedMutex;
+    mutable std::mutex isConnectionAllowedMutex;
     IsConnectionAllowedCallback isConnectionAllowed;
     TimerTasks timerTasks;
     TimerPtr timer;

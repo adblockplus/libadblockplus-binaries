@@ -37,10 +37,15 @@ namespace AdblockPlus
    * [filter properties](https://adblockplus.org/jsdoc/adblockpluscore/Filter.html),
    * use `GetProperty()` to retrieve them by name.
    */
-  class Filter : public JsValue,
-                 public std::enable_shared_from_this<Filter>
+  class Filter : public JsValue
   {
+    friend class FilterEngine;
   public:
+    Filter(const Filter& src);
+    Filter(Filter&& src);
+    Filter& operator=(const Filter& src);
+    Filter& operator=(Filter&& src);
+
     /**
      * Filter types, see https://adblockplus.org/en/filters.
      */
@@ -72,6 +77,7 @@ namespace AdblockPlus
 
     bool operator==(const Filter& filter) const;
 
+  protected:
     /**
      * Creates a wrapper for an existing JavaScript filter object.
      * Normally you shouldn't call this directly, but use
@@ -87,10 +93,30 @@ namespace AdblockPlus
    * [subscription properties](https://adblockplus.org/jsdoc/adblockpluscore/Subscription.html),
    * use `GetProperty()` to retrieve them by name.
    */
-  class Subscription : public JsValue,
-                       public std::enable_shared_from_this<Subscription>
+  class Subscription : public JsValue
   {
+    friend class FilterEngine;
   public:
+    /**
+     * Copy constructor
+     */
+    Subscription(const Subscription& src);
+
+    /**
+     * Move constructor
+     */
+    Subscription(Subscription&& src);
+
+    /**
+     * Assignment operator
+     */
+    Subscription& operator=(const Subscription& src);
+
+    /**
+     * Move assignment operator
+     */
+    Subscription& operator=(Subscription&& src);
+
     /**
      * Checks if this subscription has been added to the list of subscriptions.
      * @return `true` if this subscription has been added.
@@ -120,13 +146,14 @@ namespace AdblockPlus
     bool IsUpdating() const;
 
     /**
-     * Indicates whether the subscription is acceptable ads subscription.
-     * @return `true` if this subscription is acceptable ads subscription.
+     * Indicates whether the subscription is the Acceptable Ads subscription.
+     * @return `true` if this subscription is the Acceptable Ads subscription.
      */
     bool IsAA() const;
 
     bool operator==(const Subscription& subscription) const;
 
+  protected:
     /**
      * Creates a wrapper for an existing JavaScript subscription object.
      * Normally you shouldn't call this directly, but use
@@ -137,14 +164,9 @@ namespace AdblockPlus
   };
 
   /**
-   * Shared smart pointer to a `Filter` instance.
+   * A smart pointer to a `Filter` instance.
    */
-  typedef std::shared_ptr<Filter> FilterPtr;
-
-  /**
-   * Shared smart pointer to a `Subscription` instance.
-   */
-  typedef std::shared_ptr<Subscription> SubscriptionPtr;
+  typedef std::unique_ptr<Filter> FilterPtr;
 
   /**
    * Main component of libadblockplus.
@@ -206,18 +228,18 @@ namespace AdblockPlus
      * for the full list).
      * The second parameter is the filter/subscription object affected, if any.
      */
-    typedef std::function<void(const std::string&, const JsValuePtr)> FilterChangeCallback;
+    typedef std::function<void(const std::string&, const JsValue&)> FilterChangeCallback;
 
     /**
      * Container of name-value pairs representing a set of preferences.
      */
-    typedef std::map<std::string, AdblockPlus::JsValuePtr> Prefs;
+    typedef std::map<std::string, AdblockPlus::JsValue> Prefs;
 
     /**
      * Callback type invoked when a new notification should be shown.
      * The parameter is the Notification object to be shown.
      */
-    typedef std::function<void(const NotificationPtr&)> ShowNotificationCallback;
+    typedef std::function<void(Notification&)> ShowNotificationCallback;
 
     /**
      * Callback function returning false when current connection is not
@@ -285,35 +307,35 @@ namespace AdblockPlus
      *        see https://adblockplus.org/en/filters.
      * @return New `Filter` instance.
      */
-    FilterPtr GetFilter(const std::string& text) const;
+    Filter GetFilter(const std::string& text) const;
 
     /**
      * Retrieves a subscription object for the supplied URL.
      * @param url Subscription URL.
      * @return New `Subscription` instance.
      */
-    SubscriptionPtr GetSubscription(const std::string& url) const;
+    Subscription GetSubscription(const std::string& url) const;
 
     /**
      * Retrieves the list of custom filters.
      * @return List of custom filters.
      */
-    std::vector<FilterPtr> GetListedFilters() const;
+    std::vector<Filter> GetListedFilters() const;
 
     /**
      * Retrieves all subscriptions.
      * @return List of subscriptions.
      */
-    std::vector<SubscriptionPtr> GetListedSubscriptions() const;
+    std::vector<Subscription> GetListedSubscriptions() const;
 
     /**
      * Retrieves all recommended subscriptions.
      * @return List of recommended subscriptions.
      */
-    std::vector<SubscriptionPtr> FetchAvailableSubscriptions() const;
+    std::vector<Subscription> FetchAvailableSubscriptions() const;
 
     /**
-     * Ensures that Acceptable Ads subscription is enabled or disabled.
+     * Ensures that the Acceptable Ads subscription is enabled or disabled.
      * @param enabled
      *   - if the value is `true`
      *     - ensure that the filter set includes an enabled AA subscription,
@@ -325,15 +347,15 @@ namespace AdblockPlus
     void SetAAEnabled(bool enabled);
 
     /**
-     * Checks whether Acceptable Ads subscription is enabled.
-     * @return `true` if acceptable ads subscription is present and enabled.
+     * Checks whether the Acceptable Ads subscription is enabled.
+     * @return `true` if the Acceptable Ads subscription is present and enabled.
      */
     bool IsAAEnabled() const;
 
     /**
-     * Retrieves the URL of Acceptable Ads subscription, what makes the URL
-     * available even if subscription is not add yet.
-     * @return Returns URL of Acceptable Ads.
+     * Retrieves the URL of the Acceptable Ads subscription, what makes the URL
+     * available even if subscription is not added yet.
+     * @return Returns URL of the Acceptable Ads.
      */
     std::string GetAAUrl() const;
 
@@ -342,7 +364,7 @@ namespace AdblockPlus
      * next notification to be shown.
      * @param url URL to match notifications to (optional).
      */
-    void ShowNextNotification(const std::string& url = std::string());
+    void ShowNextNotification(const std::string& url = std::string()) const;
 
     /**
      * Sets the callback invoked when a notification should be shown.
@@ -428,14 +450,14 @@ namespace AdblockPlus
      * @param pref Preference name.
      * @return Preference value, or `null` if it doesn't exist.
      */
-    JsValuePtr GetPref(const std::string& pref) const;
+    JsValue GetPref(const std::string& pref) const;
 
     /**
      * Sets a preference value.
      * @param pref Preference name.
      * @param value New value of the preference.
      */
-    void SetPref(const std::string& pref, JsValuePtr value);
+    void SetPref(const std::string& pref, const JsValue& value);
 
     /**
      * Extracts the host from a URL.
@@ -448,7 +470,7 @@ namespace AdblockPlus
      * Sets the callback invoked when an application update becomes available.
      * @param callback Callback to invoke.
      */
-    void SetUpdateAvailableCallback(UpdateAvailableCallback callback);
+    void SetUpdateAvailableCallback(const UpdateAvailableCallback& callback);
 
     /**
      * Removes the callback invoked when an application update becomes
@@ -474,7 +496,7 @@ namespace AdblockPlus
      * Sets the callback invoked when the filters change.
      * @param callback Callback to invoke.
      */
-    void SetFilterChangeCallback(FilterChangeCallback callback);
+    void SetFilterChangeCallback(const FilterChangeCallback& callback);
 
     /**
      * Removes the callback invoked when the filters change.
@@ -534,12 +556,12 @@ namespace AdblockPlus
     FilterPtr CheckFilterMatch(const std::string& url,
                                ContentTypeMask contentTypeMask,
                                const std::string& documentUrl) const;
-    void UpdateAvailable(UpdateAvailableCallback callback, JsValueList& params);
+    void UpdateAvailable(const UpdateAvailableCallback& callback, const JsValueList& params) const;
     void UpdateCheckDone(const std::string& eventName,
-                         UpdateCheckDoneCallback callback, JsValueList& params);
-    void FilterChanged(FilterChangeCallback callback, JsValueList& params);
+                         const UpdateCheckDoneCallback& callback, const JsValueList& params);
+    void FilterChanged(const FilterChangeCallback& callback, const JsValueList& params) const;
     void ShowNotification(const ShowNotificationCallback& callback,
-      const JsValueList& params);
+      const JsValueList& param) const;
     FilterPtr GetWhitelistingFilter(const std::string& url,
       ContentTypeMask contentTypeMask, const std::string& documentUrl) const;
     FilterPtr GetWhitelistingFilter(const std::string& url,

@@ -40,16 +40,9 @@ namespace AdblockPlus
   typedef std::shared_ptr<JsEngine> JsEnginePtr;
 
   /**
-   * Shared smart pointer to a `JsValue` instance.
-   */
-  typedef std::shared_ptr<JsValue> JsValuePtr;
-  typedef std::shared_ptr<const JsValue> JsConstValuePtr;
-
-  /**
    * List of JavaScript values.
    */
-  typedef std::vector<AdblockPlus::JsValuePtr> JsValueList;
-  typedef std::vector<AdblockPlus::JsConstValuePtr> JsConstValueList;
+  typedef std::vector<AdblockPlus::JsValue> JsValueList;
 
   /**
    * Wrapper for JavaScript values.
@@ -60,7 +53,10 @@ namespace AdblockPlus
     friend class JsEngine;
   public:
     JsValue(JsValue&& src);
+    JsValue(const JsValue& src);
     virtual ~JsValue();
+
+    JsValue& operator=(const JsValue& src);
 
     bool IsUndefined() const;
     bool IsNull() const;
@@ -87,7 +83,7 @@ namespace AdblockPlus
      * @return Property value, undefined (see `IsUndefined()`) if the property
      *         does not exist.
      */
-    JsValuePtr GetProperty(const std::string& name) const;
+    JsValue GetProperty(const std::string& name) const;
 
     //@{
     /**
@@ -98,7 +94,7 @@ namespace AdblockPlus
     void SetProperty(const std::string& name, const std::string& val);
     void SetProperty(const std::string& name, int64_t val);
     void SetProperty(const std::string& name, bool val);
-    void SetProperty(const std::string& name, const JsValuePtr& value);
+    void SetProperty(const std::string& name, const JsValue& value);
     inline void SetProperty(const std::string& name, const char* val)
     {
       SetProperty(name, std::string(val));
@@ -121,11 +117,17 @@ namespace AdblockPlus
     /**
      * Invokes the value as a function (see `IsFunction()`).
      * @param params Optional list of parameters.
-     * @param thisPtr Optional `this` value.
      * @return Value returned by the function.
      */
-    JsValue Call(const JsConstValueList& params = JsConstValueList(),
-        AdblockPlus::JsValuePtr thisPtr = AdblockPlus::JsValuePtr()) const;
+    JsValue Call(const JsValueList& params = JsValueList()) const;
+
+    /**
+     * Invokes the value as a method (see `IsFunction()`).
+     * @param params list of parameters.
+     * @param thisPtr `this` value.
+     * @return Value returned by the function.
+     */
+    JsValue Call(const JsValueList& params, const AdblockPlus::JsValue& thisValue) const;
 
     /**
      * Invokes the value as a function (see `IsFunction()`) with single
@@ -136,6 +138,7 @@ namespace AdblockPlus
     JsValue Call(const JsValue& arg) const;
 
     v8::Local<v8::Value> UnwrapValue() const;
+
   protected:
     JsEnginePtr jsEngine;
   private:
