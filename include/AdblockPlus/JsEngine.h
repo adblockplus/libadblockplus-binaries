@@ -89,22 +89,32 @@ namespace AdblockPlus
     friend class JsValue;
     friend class JsContext;
 
+    struct JsWeakValuesList
+    {
+      ~JsWeakValuesList();
+      std::vector<std::unique_ptr<v8::Persistent<v8::Value>>> values;
+    };
+    typedef std::list<JsWeakValuesList> JsWeakValuesLists;
   public:
     /**
      * Event callback function.
      */
-    typedef std::function<void(const JsValueList& params)> EventCallback;
-
-    /**
-    * Callback function returning false when current connection is not allowed
-    * e.g. because it is a metered connection.
-    */
-    typedef std::function<bool()> IsConnectionAllowedCallback;
+    typedef std::function<void(JsValueList&& params)> EventCallback;
 
     /**
      * Maps events to callback functions.
      */
     typedef std::map<std::string, EventCallback> EventMap;
+
+    /**
+     * An opaque structure representing ID of stored JsValueList.
+     * 
+     */
+    class JsWeakValuesID
+    {
+      friend class JsEngine;
+      JsWeakValuesLists::const_iterator iterator;
+    };
 
     /**
      * Creates a new JavaScript engine instance.
@@ -137,7 +147,7 @@ namespace AdblockPlus
      * @param eventName Event name.
      * @param params Event parameters.
      */
-    void TriggerEvent(const std::string& eventName, const JsValueList& params);
+    void TriggerEvent(const std::string& eventName, JsValueList&& params);
 
     /**
      * Evaluates a JavaScript expression.
@@ -204,6 +214,26 @@ namespace AdblockPlus
      */
     static JsEnginePtr FromArguments(const v8::Arguments& arguments);
 
+    /**
+     * Stores `JsValue`s in a way they don't keep a strong reference to
+     * `JsEngine` and which are destroyed when `JsEngine` is destroyed. These
+     * methods should be used when one needs to carry a JsValue in a callback
+     * directly or indirectly passed to `JsEngine`.
+     * The method is thread-safe.
+     * @param `JsValueList` to store.
+     * @return `JsWeakValuesID` of stored values which allows to restore them
+     * later.
+     */
+    JsWeakValuesID StoreJsValues(const JsValueList& values);
+
+    /**
+     * Extracts and removes from `JsEngine` earlier stored `JsValue`s.
+     * The method is thread-safe.
+     * @param id `JsWeakValuesID` of values.
+     * @return `JsValueList` of stored values.
+     */
+    JsValueList TakeJsValues(const JsWeakValuesID& id);
+
     /*
      * Private functionality required to implement timers.
      * @param arguments `v8::Arguments` is the arguments received in C++
@@ -246,19 +276,6 @@ namespace AdblockPlus
     void SetWebRequest(const WebRequestPtr& val);
 
     /**
-    * Registers the callback function to check whether current connection is
-    * allowed for network requests.
-    * @param callback callback function.
-    */
-    void SetIsConnectionAllowedCallback(const IsConnectionAllowedCallback& callback);
-
-    /**
-     * Checks whether current connection is allowed. If
-     * IsConnectionAllowedCallback is not set then then it returns true.
-     */
-    bool IsConnectionAllowed() const;
-
-    /**
      * @see `SetLogSystem()`.
      */
     LogSystemPtr GetLogSystem() const;
@@ -288,13 +305,7 @@ namespace AdblockPlus
     }
 
   private:
-    struct TimerTask
-    {
-      ~TimerTask();
-      std::vector<std::unique_ptr<v8::Persistent<v8::Value>>> arguments;
-    };
-    typedef std::list<TimerTask> TimerTasks;
-    void CallTimerTask(const TimerTasks::const_iterator& timerTaskIterator);
+    void CallTimerTask(const JsWeakValuesID& timerParamsID);
 
     explicit JsEngine(const ScopedV8IsolatePtr& isolate, TimerPtr timer);
 
@@ -310,9 +321,8 @@ namespace AdblockPlus
     std::unique_ptr<v8::Persistent<v8::Context>> context;
     EventMap eventCallbacks;
     std::mutex eventCallbacksMutex;
-    mutable std::mutex isConnectionAllowedMutex;
-    IsConnectionAllowedCallback isConnectionAllowed;
-    TimerTasks timerTasks;
+    JsWeakValuesLists jsWeakValuesLists;
+    std::mutex jsWeakValuesListsMutex;
     TimerPtr timer;
   };
 }
