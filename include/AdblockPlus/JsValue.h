@@ -23,13 +23,14 @@
 #include <vector>
 #include <memory>
 
+#include <AdblockPlus/IFileSystem.h>
+
 namespace v8
 {
   class Value;
   class Object;
-  template<class T> class Handle;
   template<class T> class Local;
-  template<class T> class Persistent;
+  template<class T> class Global;
 }
 
 namespace AdblockPlus
@@ -38,6 +39,8 @@ namespace AdblockPlus
   class JsEngine;
 
   typedef std::shared_ptr<JsEngine> JsEnginePtr;
+
+  typedef IFileSystem::IOBuffer StringBuffer;
 
   /**
    * List of JavaScript values.
@@ -57,6 +60,7 @@ namespace AdblockPlus
     virtual ~JsValue();
 
     JsValue& operator=(const JsValue& src);
+    JsValue& operator=(JsValue&& src);
 
     bool IsUndefined() const;
     bool IsNull() const;
@@ -67,6 +71,7 @@ namespace AdblockPlus
     bool IsArray() const;
     bool IsFunction() const;
     std::string AsString() const;
+    StringBuffer AsStringBuffer() const;
     int64_t AsInt() const;
     bool AsBool() const;
     JsValueList AsList() const;
@@ -92,6 +97,7 @@ namespace AdblockPlus
      * @param val Property value.
      */
     void SetProperty(const std::string& name, const std::string& val);
+    void SetProperty(const std::string& name, const StringBuffer& val);
     void SetProperty(const std::string& name, int64_t val);
     void SetProperty(const std::string& name, bool val);
     void SetProperty(const std::string& name, const JsValue& value);
@@ -104,6 +110,12 @@ namespace AdblockPlus
       SetProperty(name, static_cast<int64_t>(val));
     }
     //@}
+    /**
+     * Sets a property value string if this is an object (see `IsObject()`).
+     * @param name Property name.
+     * @param val Property value as a StringBuffer.
+     */
+    void SetStringBufferProperty(const std::string& name, const StringBuffer& val);
 
     /**
      * Returns the value's class name, e.g.\ _Array_ for arrays
@@ -142,13 +154,14 @@ namespace AdblockPlus
   protected:
     JsEnginePtr jsEngine;
   private:
-    JsValue(JsEnginePtr jsEngine, v8::Handle<v8::Value> value);
-    void SetProperty(const std::string& name, v8::Handle<v8::Value> val);
+    JsValue(JsEnginePtr jsEngine, v8::Local<v8::Value> value);
+    void SetProperty(const std::string& name, v8::Local<v8::Value> val);
+
     // Parameter args is not const because a pointer to its internal arrays is
     // passed to v8::Function::Call but the latter does not expect a const pointer.
-    JsValue Call(std::vector<v8::Handle<v8::Value>>& args, v8::Local<v8::Object> thisObj) const;
+    JsValue Call(std::vector<v8::Local<v8::Value>>& args, v8::Local<v8::Object> thisObj) const;
 
-    std::unique_ptr<v8::Persistent<v8::Value>> value;
+    std::unique_ptr<v8::Global<v8::Value>> value;
   };
 }
 

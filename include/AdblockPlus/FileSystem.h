@@ -23,6 +23,8 @@
 #include <string>
 #include <memory>
 
+#include "IFileSystem.h"
+
 namespace AdblockPlus
 {
   /**
@@ -31,57 +33,22 @@ namespace AdblockPlus
   class FileSystem
   {
   public:
-    /**
-     * Result of a stat operation, i.e.\ information about a file.
-     */
-    struct StatResult
-    {
-      StatResult()
-      {
-        exists = false;
-        isDirectory = false;
-        isFile = false;
-        lastModified = 0;
-      }
-
-      /**
-       * File exists.
-       */
-      bool exists;
-
-      /**
-       * File is a directory.
-       */
-      bool isDirectory;
-
-      /**
-       * File is a regular file.
-       */
-      bool isFile;
-
-      /**
-       * POSIX time of the last modification.
-       */
-      int64_t lastModified;
-    };
-
     virtual ~FileSystem() {}
 
     /**
      * Reads from a file.
      * @param path File path.
-     * @return Input stream with the file's contents.
+     * @return Buffer with the file content.
      */
-    virtual std::shared_ptr<std::istream>
-      Read(const std::string& path) const = 0;
+    virtual IFileSystem::IOBuffer Read(const std::string& path) const = 0;
 
     /**
      * Writes to a file.
      * @param path File path.
-     * @param data Input stream with the data to write.
+     * @param data Buffer with the data to write.
      */
     virtual void Write(const std::string& path,
-                       std::istream& data) = 0;
+                       const IFileSystem::IOBuffer& data) = 0;
 
     /**
      * Moves a file (i.e.\ renames it).
@@ -102,7 +69,7 @@ namespace AdblockPlus
      * @param path File path.
      * @return File information.
      */
-    virtual StatResult Stat(const std::string& path) const = 0;
+    virtual IFileSystem::StatResult Stat(const std::string& path) const = 0;
 
     /**
      * Returns the absolute path to a file.
@@ -115,7 +82,7 @@ namespace AdblockPlus
   /**
    * Shared smart pointer to a `FileSystem` instance.
    */
-  typedef std::shared_ptr<FileSystem> FileSystemPtr;
+  typedef std::shared_ptr<FileSystem> FileSystemSyncPtr;
 }
 
 #endif
