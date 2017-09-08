@@ -1,6 +1,6 @@
 /*
  * This file is part of Adblock Plus <https://adblockplus.org/>,
- * Copyright (C) 2006-2017 eyeo GmbH
+ * Copyright (C) 2006-present eyeo GmbH
  *
  * Adblock Plus is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as
@@ -51,6 +51,7 @@ namespace AdblockPlus
      */
     enum Type {TYPE_BLOCKING, TYPE_EXCEPTION,
                TYPE_ELEMHIDE, TYPE_ELEMHIDE_EXCEPTION,
+               TYPE_TYPE_ELEMHIDE_EMULATION,
                TYPE_COMMENT, TYPE_INVALID};
 
     /**
@@ -205,6 +206,8 @@ namespace AdblockPlus
       CONTENT_TYPE_OBJECT = 16,
       CONTENT_TYPE_SUBDOCUMENT = 32,
       CONTENT_TYPE_DOCUMENT = 64,
+      CONTENT_TYPE_WEBSOCKET = 128,
+      CONTENT_TYPE_WEBRTC = 256,
       CONTENT_TYPE_PING = 1024,
       CONTENT_TYPE_XMLHTTPREQUEST = 2048,
       CONTENT_TYPE_OBJECT_SUBREQUEST = 4096,
@@ -280,8 +283,8 @@ namespace AdblockPlus
     };
 
     /**
-    * Callback type invoked when FilterEngine is created.
-    */
+     * Callback type invoked when FilterEngine is created.
+     */
     typedef std::function<void(const FilterEnginePtr&)> OnCreatedCallback;
 
     /**
@@ -297,17 +300,10 @@ namespace AdblockPlus
       const CreationParameters& parameters = CreationParameters());
 
     /**
-     * Synchronous interface to construct FilterEngine. For details see
-     * asynchronous version CreateAsync.
-     */
-    static FilterEnginePtr Create(const JsEnginePtr& jsEngine,
-      const CreationParameters& params = CreationParameters());
-
-    /**
      * Retrieves the `JsEngine` instance associated with this `FilterEngine`
      * instance.
      */
-    JsEnginePtr GetJsEngine() const { return jsEngine; }
+    JsEngine& GetJsEngine() const { return *jsEngine; }
 
     /**
      * Checks if this is the first run of the application.

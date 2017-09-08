@@ -1,6 +1,6 @@
 /*
  * This file is part of Adblock Plus <https://adblockplus.org/>,
- * Copyright (C) 2006-2017 eyeo GmbH
+ * Copyright (C) 2006-present eyeo GmbH
  *
  * Adblock Plus is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as
@@ -27,10 +27,11 @@
 #include <mutex>
 #include <AdblockPlus/AppInfo.h>
 #include <AdblockPlus/LogSystem.h>
-#include <AdblockPlus/FileSystem.h>
+#include <AdblockPlus/IFileSystem.h>
 #include <AdblockPlus/JsValue.h>
-#include <AdblockPlus/WebRequest.h>
+#include <AdblockPlus/IWebRequest.h>
 #include <AdblockPlus/ITimer.h>
+#include <AdblockPlus/Scheduler.h>
 
 namespace v8
 {
@@ -44,6 +45,7 @@ namespace v8
 namespace AdblockPlus
 {
   class JsEngine;
+  class Platform;
 
   /**
    * Shared smart pointer to a `JsEngine` instance.
@@ -51,38 +53,18 @@ namespace AdblockPlus
   typedef std::shared_ptr<JsEngine> JsEnginePtr;
 
   /**
-   * A factory to construct DefaultTimer.
+   * Provides with isolate. The main aim of this iterface is to delegate a
+   * proper initialization and deinitialization of v8::Isolate to an embedder.
    */
-  TimerPtr CreateDefaultTimer();
-
-  /**
-   * A factory to construct DefaultFileSystem.
-   */
-  FileSystemPtr CreateDefaultFileSystem();
-
-  /**
-   * A factory to construct DefaultWebRequest.
-   */
-  WebRequestPtr CreateDefaultWebRequest();
-
-  /**
-   * Scope based isolate manager. Creates a new isolate instance on
-   * constructing and disposes it on destructing.
-   */
-  class ScopedV8Isolate
+  struct IV8IsolateProvider
   {
-  public:
-    ScopedV8Isolate();
-    ~ScopedV8Isolate();
-    v8::Isolate* Get()
-    {
-      return isolate;
-    }
-  private:
-    ScopedV8Isolate(const ScopedV8Isolate&);
-    ScopedV8Isolate& operator=(const ScopedV8Isolate&);
+    virtual ~IV8IsolateProvider() {}
 
-    v8::Isolate* isolate;
+    /**
+     * Returns v8::Isolate. All subsequent calls of this method should return
+     * the same pointer to v8::Isolate as the first call.
+     */
+    virtual v8::Isolate* Get() = 0;
   };
 
   /**
@@ -112,7 +94,6 @@ namespace AdblockPlus
 
     /**
      * An opaque structure representing ID of stored JsValueList.
-     * 
      */
     class JsWeakValuesID
     {
@@ -122,17 +103,15 @@ namespace AdblockPlus
 
     /**
      * Creates a new JavaScript engine instance.
+     *
      * @param appInfo Information about the app.
-     * @param timer Implementation of timer.
-     * @param fileSystem Implementation of filesystem.
-     * @param webRequest Implementation of web request.
+     * @param platform AdblockPlus platform providing with necessary
+     *        dependencies.
+     * @param isolate A provider of v8::Isolate, if the value is nullptr then
+     *        a default implementation is used.
      * @return New `JsEngine` instance.
      */
-    static JsEnginePtr New(const AppInfo& appInfo = AppInfo(),
-      TimerPtr timer = CreateDefaultTimer(),
-      FileSystemPtr fileSystem = CreateDefaultFileSystem(),
-      WebRequestPtr webRequest = CreateDefaultWebRequest());
-
+    static JsEnginePtr New(const AppInfo& appInfo, Platform& platform, std::unique_ptr<IV8IsolateProvider> isolate = nullptr);
     /**
      * Registers the callback function for an event.
      * @param eventName Event name. Note that this can be any string - it's a
@@ -262,43 +241,6 @@ namespace AdblockPlus
     JsValueList ConvertArguments(const v8::FunctionCallbackInfo<v8::Value>& arguments);
 
     /**
-     * Private functionality.
-     * @return The asynchronous IFileSystem implementation.
-     */
-    FileSystemPtr GetAsyncFileSystem() const;
-
-    /**
-     * Sets the synchronous `FileSystem` implementation used for all
-     * file I/O. Setting this is optional, the engine will use the
-     * implementation created by `CreateDefaultFileSystem()` by
-     * default, which might be sufficient.
-     * @param The `FileSystem` instance to use.
-     */
-    void SetFileSystem(const FileSystemSyncPtr& val);
-
-    /**
-     * Sets the `WebRequest` implementation used for XMLHttpRequests.
-     * Setting this is optional, the engine will use a `DefaultWebRequest`
-     * instance by default, which might be sufficient.
-     * @param The `WebRequest` instance to use.
-     */
-    void SetWebRequest(const WebRequestSharedPtr& val);
-
-    /**
-     * @see `SetLogSystem()`.
-     */
-    LogSystemPtr GetLogSystem() const;
-
-    /**
-     * Sets the `LogSystem` implementation used for logging (e.g. to handle
-     * `console.log()` calls from JavaScript).
-     * Setting this is optional, the engine will use a `DefaultLogSystem`
-     * instance by default, which might be sufficient.
-     * @param The `LogSystem` instance to use.
-     */
-    void SetLogSystem(const LogSystemPtr& val);
-
-    /**
      * Sets a global property that can be accessed by all the scripts.
      * @param name Name of the property to set.
      * @param value Value of the property to set.
@@ -310,7 +252,7 @@ namespace AdblockPlus
      */
     v8::Isolate* GetIsolate()
     {
-      return isolate.Get();
+      return isolate->Get();
     }
 
     /**
@@ -318,27 +260,31 @@ namespace AdblockPlus
      * garbage collection.
      */
     void NotifyLowMemory();
+
+    /**
+     * Private functionality.
+     */
+    Platform& GetPlatform()
+    {
+      return platform;
+    }
   private:
     void CallTimerTask(const JsWeakValuesID& timerParamsID);
 
-    explicit JsEngine(TimerPtr timer, FileSystemPtr fileSystem, WebRequestPtr webRequest);
+    explicit JsEngine(Platform& platform, std::unique_ptr<IV8IsolateProvider> isolate);
 
     JsValue GetGlobalObject();
 
+    Platform& platform;
     /// Isolate must be disposed only after disposing of all objects which are
     /// using it.
-    ScopedV8Isolate isolate;
+    std::unique_ptr<IV8IsolateProvider> isolate;
 
-    FileSystemPtr fileSystem;
-    LogSystemPtr logSystem;
     std::unique_ptr<v8::Global<v8::Context>> context;
     EventMap eventCallbacks;
     std::mutex eventCallbacksMutex;
     JsWeakValuesLists jsWeakValuesLists;
     std::mutex jsWeakValuesListsMutex;
-    TimerPtr timer;
-    WebRequestPtr webRequest;
-    WebRequestSharedPtr webRequestLegacy;
   };
 }
 

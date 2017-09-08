@@ -1,6 +1,6 @@
 /*
  * This file is part of Adblock Plus <https://adblockplus.org/>,
- * Copyright (C) 2006-2017 eyeo GmbH
+ * Copyright (C) 2006-present eyeo GmbH
  *
  * Adblock Plus is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as
@@ -41,8 +41,6 @@ namespace AdblockPlus
       StatResult()
       {
         exists = false;
-        isDirectory = false;
-        isFile = false;
         lastModified = 0;
       }
 
@@ -50,16 +48,6 @@ namespace AdblockPlus
        * File exists.
        */
       bool exists;
-
-      /**
-       * File is a directory.
-       */
-      bool isDirectory;
-
-      /**
-       * File is a regular file.
-       */
-      bool isFile;
 
       /**
        * POSIX time of the last modification.
@@ -88,37 +76,37 @@ namespace AdblockPlus
 
     /**
      * Reads from a file.
-     * @param path File path.
+     * @param fileName File name.
      * @param callback The function called on completion with the input data.
      */
-    virtual void Read(const std::string& path,
+    virtual void Read(const std::string& fileName,
                       const ReadCallback& callback) const = 0;
 
     /**
      * Writes to a file.
-     * @param path File path.
+     * @param fileName File name.
      * @param data The data to write.
      * @param callback The function called on completion.
      */
-    virtual void Write(const std::string& path,
+    virtual void Write(const std::string& fileName,
                        const IOBuffer& data,
                        const Callback& callback) = 0;
 
     /**
      * Moves a file (i.e.\ renames it).
-     * @param fromPath Current path to the file.
-     * @param toPath New path to the file.
+     * @param fromFileName Current file name.
+     * @param toFileName New file name.
      * @param callback The function called on completion.
      */
-    virtual void Move(const std::string& fromPath, const std::string& toPath,
+    virtual void Move(const std::string& fromFileName, const std::string& toFileName,
                       const Callback& callback) = 0;
 
     /**
      * Removes a file.
-     * @param path File path.
+     * @param fileName File name.
      * @param callback The function called on completion.
      */
-    virtual void Remove(const std::string& path, const Callback& callback) = 0;
+    virtual void Remove(const std::string& fileName, const Callback& callback) = 0;
 
     /**
      * Callback type for the asynchronous Stat call.
@@ -129,24 +117,17 @@ namespace AdblockPlus
 
     /**
      * Retrieves information about a file.
-     * @param path File path.
+     * @param fileName File name.
      * @param callback The function called on completion.
      */
-    virtual void Stat(const std::string& path,
+    virtual void Stat(const std::string& fileName,
                       const StatCallback& callback) const = 0;
-
-    /**
-     * Returns the absolute path to a file.
-     * @param path File path (can be relative or absolute).
-     * @return Absolute file path.
-     */
-    virtual std::string Resolve(const std::string& path) const = 0;
   };
 
   /**
-   * Shared smart pointer to a `IFileSystem` instance.
+   * Unique smart pointer to to a `IFileSystem` instance.
    */
-  typedef std::shared_ptr<IFileSystem> FileSystemPtr;
+  typedef std::unique_ptr<IFileSystem> FileSystemPtr;
 }
 
 #endif

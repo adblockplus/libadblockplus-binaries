@@ -1,6 +1,6 @@
 /*
  * This file is part of Adblock Plus <https://adblockplus.org/>,
- * Copyright (C) 2006-2017 eyeo GmbH
+ * Copyright (C) 2006-present eyeo GmbH
  *
  * Adblock Plus is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as
@@ -31,16 +31,11 @@
 #define ADBLOCK_PLUS_ADBLOCK_PLUS_H
 
 #include <AdblockPlus/AppInfo.h>
-#include <AdblockPlus/FileSystem.h>
-#include <AdblockPlus/DefaultLogSystem.h>
-#include <AdblockPlus/DefaultFileSystem.h>
-#include <AdblockPlus/DefaultWebRequest.h>
 #include <AdblockPlus/FilterEngine.h>
 #include <AdblockPlus/LogSystem.h>
 #include <AdblockPlus/JsEngine.h>
 #include <AdblockPlus/JsValue.h>
 #include <AdblockPlus/ReferrerMapping.h>
-#include <AdblockPlus/WebRequest.h>
 #include "AdblockPlus/Notification.h"
 
 #endif

@@ -1,6 +1,6 @@
 /*
  * This file is part of Adblock Plus <https://adblockplus.org/>,
- * Copyright (C) 2006-2017 eyeo GmbH
+ * Copyright (C) 2006-present eyeo GmbH
  *
  * Adblock Plus is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as
@@ -48,9 +48,9 @@ namespace AdblockPlus
   };
 
   /**
-   * Shared smart pointer to a `LogSystem` instance.
+   * Smart pointer to a `LogSystem` instance.
    */
-  typedef std::shared_ptr<LogSystem> LogSystemPtr;
+  typedef std::unique_ptr<LogSystem> LogSystemPtr;
 }
 
 #endif

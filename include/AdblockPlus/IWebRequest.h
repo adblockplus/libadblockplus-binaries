@@ -1,6 +1,6 @@
 /*
  * This file is part of Adblock Plus <https://adblockplus.org/>,
- * Copyright (C) 2006-2017 eyeo GmbH
+ * Copyright (C) 2006-present eyeo GmbH
  *
  * Adblock Plus is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 3 as
@@ -114,6 +114,17 @@ namespace AdblockPlus
    * Unique smart pointer to an instance of `IWebRequest` implementation.
    */
   typedef std::unique_ptr<IWebRequest> WebRequestPtr;
+
+
+  /**
+   * Private functionality.
+   */
+  struct IWebRequestSync
+  {
+    virtual ~IWebRequestSync() {}
+    virtual ServerResponse GET(const std::string& url, const HeaderList& requestHeaders) const = 0;
+  };
+  typedef std::unique_ptr<IWebRequestSync> WebRequestSyncPtr;
 }
 
 #endif
